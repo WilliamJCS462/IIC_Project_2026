@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv, dotenv_values
 from graph.graph import run_graph
 from database.database import database_init
+from utils.errors import get_error_code
 
 load_dotenv()
 
@@ -37,7 +38,11 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    response = run_graph(prompt)
+    try:
+        response = run_graph(prompt)
+    except Exception as e:
+        reponse = f"ERROR - Error Codes: GRAPH_RUN_FAILURE, {get_error_code(e)}"
+
 
     st.session_state.messages.append({
         "role": "assistant",
