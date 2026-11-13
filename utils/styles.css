@@ -1,0 +1,138 @@
+/* main page */
+.stApp {
+    background-color: #1B2D4B;
+    display: flex;
+}
+
+/* hides top banner */
+header[data-testid="stHeader"] {
+    display: None;
+}
+
+/*hides background of text input area */
+.stBottom > div {
+    background-color: transparent;
+}
+
+/* chatbot container */
+.st-key-chatbot {
+    background-color: #0C1A32;
+    flex: 1;
+    border-radius: 0.75rem;
+    justify-content: space-between;
+}
+
+/* chatbot container parent sets height to auto */
+div :has(> .st-key-chatbot) {
+    flex: 1;
+}
+
+/* Main container to fill page */
+.stMainBlockContainer {
+    flex: 1;
+    display: flex;
+    padding: 2rem;
+}
+
+/* ensures boxes fill out properly */
+.stVerticalBlock {
+    flex: 1;
+}
+
+/* title bar styling */
+.st-key-title_bar {
+    padding-left: 1.5rem;
+    border-bottom: #212E44 0.1rem solid;
+    flex-direction: row;
+}
+
+/* cascade font size */
+.st-key-chatbot_pfp * {
+    font-size: 4rem;
+    text-align: center;
+}
+
+div :has( > .st-key-chatbot_pfp) {
+    width: auto;
+    padding-right: 1.5rem;
+}
+
+/*Remove Title Padding */
+#sql-assistant {
+    padding: 0;
+    padding-top: 1rem;
+}
+
+/* Display for chat messages*/
+.st-key-messages {
+    padding: 2rem;
+    border: None;
+}
+
+/* Display for chat messages*/
+.st-key-prompt_bar {
+    padding: 1.5rem;
+    border-top: #212E44 0.1rem solid;
+}
+
+/* Styles the specific ChatInput in our chatbar */
+.st-key-prompt_bar [data-testid="stChatInput"] * {
+    background-color: transparent;
+    border: None;
+}
+
+.st-key-prompt_bar [data-testid="stChatInputSubmitButton"] {
+    background-color: #6993FF;
+    border-radius: 4rem;
+    margin-bottom: 0.04rem;
+}
+
+/* User chat messages */
+.stChatMessage:has([aria-label="Chat message from user"]) {
+    background-color: #6993FF;
+    flex-direction: row-reverse;
+    width: auto;
+    max-width: 75%;
+    align-self: flex-end;
+    padding-left: 1.5rem;
+}
+
+/* Only way to address message avatar */
+.stChatMessage:has([aria-label="Chat message from user"]) > :first-child {
+    background-color: white;
+    color: #6993FF;
+    border: None;
+}
+
+.stChatMessage:has([aria-label="Chat message from user"]) > :first-child * {
+    color: #6993FF;
+}
+
+/* Message text */
+.stChatMessage:has([aria-label="Chat message from user"]) * {
+    text-align: right;
+}
+
+/* AI Message */
+.stChatMessage:has([aria-label="Chat message from assistant"]) {
+    background-color: #112547;
+    width: auto;
+    align-self: flex-start; /* For reasons known only to god you need to self align this to flex-start otherwise it expands to the max width limit. Streamlit masterclass...*/
+    max-width: 75%;
+    padding-right: 1.5rem;
+}
+
+/* Only way to address message avatar */
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :first-child {
+    background-color: white;
+    border: None;
+}
+
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :first-child * {
+    color: #112547;
+}
+
+/* Message Text */
+.stChatMessage:has([aria-label="Chat message from assistant"]) * {
+    text-align: left;
+}

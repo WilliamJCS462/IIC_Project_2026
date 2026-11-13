@@ -60,7 +60,7 @@ def generate_error_response(error_code: str):
 
             You are an SQL assistant
 
-            An error has occured in the pipeline. Apologise and explain breifly in simple terms to a user that an error has occured
+            An error has occured in the pipeline. Apologise and explain breifly in simple terms to a user that an error has occured. Do not  assume the users input is the cause of the error.
         """
 
         user_prompt = f"""
