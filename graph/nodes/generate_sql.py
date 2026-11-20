@@ -25,7 +25,6 @@ def generate_sql(prompt: str):
             - Only use columns from the schema
             - The returned SQL query must be syntactically correct
             - Generate a query that answers the question as best as possible
-            - Limit all responses to 10 rows maximum
         """
 
         user_prompt = f"""
@@ -53,7 +52,16 @@ def generate_sql(prompt: str):
         sql_trimmed = sql_trimmed.replace("'''", "")
         sql_trimmed = sql_trimmed.strip()
 
-        return {"sql_query": sql_trimmed}
+        #strip the query of the trailing ; and then wrap in a limiter
+        sql_limited = f"""
+            SELECT * 
+            FROM (
+                {sql_trimmed.rstrip(';')}
+            ) t
+            LIMIT 10;
+        """
+
+        return {"sql_query": sql_limited}
 
     except Exception as e:
         return {
