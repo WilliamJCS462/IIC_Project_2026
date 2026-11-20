@@ -1,0 +1,31 @@
+prompt,query
+"What proportion of records are First Class, Second Class, Standard Class and Same Day?","SELECT ""Ship Mode"", COUNT(*) FROM superstore GROUP BY ""Ship Mode"" LIMIT 10;"
+What is the most common state?,"SELECT State, COUNT(*) FROM superstore GROUP BY State ORDER BY COUNT(*) DESC LIMIT 10;"
+What is the least common category?,"SELECT Category, COUNT(*) FROM superstore GROUP BY Category ORDER BY COUNT(*) ASC LIMIT 10;"
+How many cities are in Texas?,SELECT COUNT(DISTINCT City) FROM superstore WHERE State = 'Texas'
+How many records are there in the database?,SELECT COUNT(*) FROM superstore
+Which sub-category has the highest average profit?,"SELECT Sub_Category, AVG(Profit) FROM superstore GROUP BY Sub_Category ORDER BY AVG(Profit) DESC LIMIT 10;"
+Which record has the highest profit?,SELECT * FROM superstore ORDER BY Profit DESC LIMIT 1;
+Show me the 5 highest discount records from Los Angeles,SELECT * FROM superstore WHERE City = 'Los Angeles' ORDER BY Discount DESC LIMIT 5;
+List all regions,SELECT DISTINCT Region FROM superstore LIMIT 10;
+Which category has the highest cumulative sales?,"SELECT Category, SUM(Sales) FROM superstore GROUP BY Category ORDER BY SUM(Sales) DESC LIMIT 1;"
+Which record has the lowest profit?,SELECT * FROM superstore ORDER BY Profit ASC LIMIT 1;
+Show me records with postal code 68025,"SELECT * FROM superstore WHERE ""Postal Code"" = 68025 LIMIT 10;"
+Show me the 5 highest quantity records from central texas?,SELECT * FROM superstore WHERE State = 'Texas' AND Region = 'Central' ORDER BY Quantity DESC LIMIT 5;
+Show me the most common sub categories for the category furniture?,"SELECT Sub_Category, COUNT(*) FROM superstore WHERE Category = 'Furniture' GROUP BY Sub_Category ORDER BY COUNT(*) DESC LIMIT 10;"
+How many records are from the state of Ohio?,SELECT COUNT(*) FROM superstore WHERE State = 'Ohio';
+What are the most and least common state?,"(SELECT State, COUNT(*) FROM superstore GROUP BY State ORDER BY COUNT(*) DESC LIMIT 1) UNION ALL (SELECT State, COUNT(*) FROM superstore GROUP BY State ORDER BY COUNT(*) ASC LIMIT 1);"
+How many countries are in the database?,SELECT COUNT(DISTINCT Country) FROM superstore;
+How many states are there in the database?,SELECT COUNT(DISTINCT State) FROM superstore;
+How many Second Class records are there for Nevada?,"SELECT COUNT(*) FROM superstore WHERE ""Ship Mode"" = 'Second Class' AND State = 'Nevada';"
+Are there more Consumer or Corporate records?,"SELECT Segment, COUNT(*) FROM superstore WHERE Segment = 'Consumer' OR Segment = 'Corporate' GROUP BY Segment ORDER BY COUNT(*) DESC;"
+What is the most common state for Accessory records,"SELECT State, COUNT(*) FROM superstore WHERE Sub_Category = 'Accessories' GROUP BY State ORDER BY COUNT(*) DESC LIMIT 10"
+Show me a standard class record for office supplies in Houston,"SELECT * FROM superstore WHERE ""Ship Mode"" = 'Standard Class' LIMIT 1;"
+Show me the 10 highest records by profit,SELECT * FROM superstore ORDER BY Profit DESC LIMIT 10;
+Show me the 3 lowest records by quantity,SELECT * FROM superstore ORDER BY Quantity ASC LIMIT 3;
+What are the first 10 sub categories sorted alphabetically,SELECT Sub_Category FROM superstore GROUP BY Sub_Category ORDER BY Sub_Category ASC LIMIT 10;
+What are the 3 states with the highest numbers of cities,"SELECT State, COUNT(DISTINCT City) FROM superstore GROUP BY State ORDER BY COUNT(DISTINCT City) DESC LIMIT 3;"
+How many states does the country United States have?,SELECT COUNT(DISTINCT State) FROM superstore WHERE Country = 'United States';
+How many states receive same day shipping?,"SELECT COUNT(DISTINCT State) FROM superstore WHERE ""Ship Mode"" = 'Same Day'"
+How many records are from Fremont,SELECT COUNT(*) FROM superstore WHERE City = 'Fremont';
+How many records have the region east?,SELECT COUNT(*) FROM superstore WHERE Region = 'East';
