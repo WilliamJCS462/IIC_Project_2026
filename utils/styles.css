@@ -44,6 +44,7 @@ div :has(> .st-key-chatbot) {
     padding-left: 1.5rem;
     border-bottom: #212E44 0.1rem solid;
     flex-direction: row;
+    align-items: center;
 }
 
 /* cascade font size */
@@ -61,6 +62,25 @@ div :has( > .st-key-chatbot_pfp) {
 #sql-assistant {
     padding: 0;
     padding-top: 1rem;
+}
+
+.st-key-accuracy_button > div > button {
+    background-color: #6993FF;
+    border-color: transparent;
+}
+
+div:has( > .st-key-accuracy_score) {
+    justify-self: flex-end; /* shift to end of title bar */
+    margin-right: 3.5rem;
+    margin-left: 1.5rem;
+}
+
+.st-key-accuracy_score {
+    align-items: center;
+}
+
+.st-key-accuracy_score * {
+    text-align: center;
 }
 
 /* Display for chat messages*/
