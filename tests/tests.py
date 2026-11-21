@@ -10,7 +10,7 @@ import graph.graph as graph_module
 base_dir = Path(__file__).resolve().parent.parent
 
 #tests the program against 30 examples
-def run_accuracy_tests():
+def run_accuracy_tests(progress_callback=None): #here we pass a streamlit progress bar obejct forward and update it from here
     try:
         base_dir = Path(__file__).resolve().parent.parent #need this inside because of moduling importing
         database_init() #need to start the database as we cant assume the app is running for tests
@@ -32,7 +32,8 @@ def run_accuracy_tests():
         graph_module.run_sql = patched_run_sql
 
         #test per prompt
-        for _, row in tests.iterrows():
+        total = len(tests)
+        for i, (_, row) in enumerate(tests.iterrows(), start=1):
             try:
                 prompt = row["prompt"]
                 query = row["query"]
@@ -59,6 +60,10 @@ def run_accuracy_tests():
             except:
                 test_accuracies.append(0)
 
+            #increment progress bar via callback
+            if progress_callback:
+                progress_callback(i,total)
+
         #unpatch the function after we have finished testing
         graph_module.run_sql = original_run_sql
 
@@ -82,6 +87,4 @@ def run_accuracy_tests():
     #assume being done by a developer, return error in the terminal without crashing the code
     except Exception as e:
         print(f"Testing Failed with Error: {e}")
-
-run_accuracy_tests()
 
