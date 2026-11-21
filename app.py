@@ -110,3 +110,8 @@ with st.container(key="chatbot"):
             "content": response
         })
 
+with st.sidebar:
+    st.header("Improvement Features")
+    st.checkbox("Coming Soon", key="check_1", help="This feature is coming soon")
+    st.checkbox("Coming Soon", key="check_2", help="This feature is coming soon")
+    st.checkbox("Coming Soon", key="check_3", help="This feature is coming soon")

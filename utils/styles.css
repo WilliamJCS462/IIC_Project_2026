@@ -6,6 +6,10 @@
 
 /* hides top banner */
 header[data-testid="stHeader"] {
+    background-color: transparent;
+}
+
+div:has(> .stToolbarActions) {
     display: None;
 }
 
@@ -155,4 +159,8 @@ div:has( > .st-key-accuracy_score) {
 /* Message Text */
 .stChatMessage:has([aria-label="Chat message from assistant"]) * {
     text-align: left;
+}
+
+.stSidebar {
+    background-color: #0C1A32;
 }
