@@ -32,6 +32,13 @@ def load_metrics():
         accuracy_message = f"Estimated Accuracy: Untested"
     return accuracy_message
 
+@st.dialog("Query Data")
+def data_popup(df):
+    if (df is not None) and not isinstance(df, str):
+        st.dataframe(df)
+    else:
+        st.markdown("No data")
+
 st.set_page_config(
     page_title="SQL Assistant",
     page_icon="👾",
@@ -43,12 +50,18 @@ improvements_path = base_dir / "config" / "improvements.yaml"
 
 default_config = {
         "accuracy_scoring": False,
-        "complexity_scoring" : False
+        "complexity_scoring" : False,
+        "show_sql": False,
+        "show_data": False,
+        "show_reasoning": False
         }
 
 if improvements_path.exists():
     with open(improvements_path, "r") as file:
-        st.session_state.improvements = yaml.safe_load(file) or default_config
+        if (yaml.safe_load(file) or default_config).keys() == default_config.keys(): #check for missing config
+            st.session_state.improvements = yaml.safe_load(file) or default_config
+        else:
+            st.session_state.improvements = default_config
 else:
     #set default config to false
     st.session_state.improvements = default_config
@@ -77,6 +90,33 @@ with st.sidebar:
     with open(improvements_path, "w") as file:
         yaml.safe_dump(st.session_state.improvements, file)
 
+    #show sql
+    if st.toggle(label="Show SQL", key="show_sql", value=st.session_state.improvements["show_sql"], help="Shows the SQL query used to answer the question."):
+        st.session_state.improvements["show_sql"] = True
+    else:
+        st.session_state.improvements["show_sql"] = False
+    #update config file
+    with open(improvements_path, "w") as file:
+        yaml.safe_dump(st.session_state.improvements, file)
+
+    #show data
+    if st.toggle(label="Show Data", key="show_data", value=st.session_state.improvements["show_data"], help="Shows the database data used to answer the question."):
+        st.session_state.improvements["show_data"] = True
+    else:
+        st.session_state.improvements["show_data"] = False
+    #update config file
+    with open(improvements_path, "w") as file:
+        yaml.safe_dump(st.session_state.improvements, file)
+
+    #show reasoning
+    if st.toggle(label="Show Reasoning", key="show_reasoning", value=st.session_state.improvements["show_reasoning"], help="Shows the assistants reasoning behind its response"):
+        st.session_state.improvements["show_reasoning"] = True
+    else:
+        st.session_state.improvements["show_reasoning"] = False
+    #update config file
+    with open(improvements_path, "w") as file:
+        yaml.safe_dump(st.session_state.improvements, file)
+
 #conditional css styling to hide elements
 if not st.session_state.improvements["accuracy_scoring"]:
     st.markdown("""
@@ -92,6 +132,33 @@ if not st.session_state.improvements["complexity_scoring"]:
         <style>
 
         .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(3) {
+            display: None;
+        }
+    """, unsafe_allow_html=True)
+
+if not st.session_state.improvements["show_sql"]:
+    st.markdown("""
+        <style>
+
+        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(4) {
+            display: None;
+        }
+    """, unsafe_allow_html=True)
+
+if not st.session_state.improvements["show_data"]:
+    st.markdown("""
+        <style>
+
+        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(5) {
+            display: None;
+        }
+    """, unsafe_allow_html=True)
+
+if not st.session_state.improvements["show_reasoning"]:
+    st.markdown("""
+        <style>
+
+        [data-testid="stPopoverButton"]{
             display: None;
         }
     """, unsafe_allow_html=True)
@@ -135,13 +202,26 @@ with st.container(key="chatbot"):
         if "messages" not in st.session_state:
             st.session_state.messages = []
 
-        for message in st.session_state.messages:
+        for i, message in enumerate(st.session_state.messages):
             with st.chat_message(message["role"]):
-                #if complexity scoring:
                     with st.container():
-                        st.markdown(message["content"])
+                        #puts the info button next to the main response
+                        if message["role"] == "assistant":
+                            with st.container():
+                                col1, col2 = st.columns([20,1])
+                                with col1:
+                                    st.markdown(message["content"])
+                                with col2:
+                                    with st.popover("ℹ️"):
+                                        st.write(message["reasoning"])
+                        else:
+                            st.markdown(message["content"])
                         st.markdown("") #used to do css referencing, here acts as a placeholder for the spinner message
                         st.markdown(message["complexity_scoring"])
+                        st.markdown(message["sql_query"])
+                        if message["role"] == "assistant":
+                            if st.button("View Data", key=f"data_button_{i // 2}"): #we will use tertiary buttons for display
+                                data_popup(message["sql_data"])
 
     with st.container(key="prompt_bar"):
         prompt = st.chat_input("Ask the assistant a question...")
@@ -150,7 +230,11 @@ with st.container(key="chatbot"):
         st.session_state.messages.append({
             "role": "user",
             "content": prompt,
-            "complexity_scoring": "" #user messages dont have complexity scoring but we want message objects to be as similar as possible hence a placeholder here
+            #user messages dont have improvements but its helpful to include them as blanks here so that all messages are the same
+            "complexity_scoring": "",
+            "sql_query": "",
+            "sql_data": "",
+            "reasoning": ""
         })
 
         with messages:
@@ -165,20 +249,21 @@ with st.container(key="chatbot"):
                             response, improvements = run_graph(prompt)
                         except Exception as e:
                             response = f"ERROR - Error Codes: GRAPH_RUN_FAILURE, {get_error_code(e)}"
-                            #default improvements
+                            #default improvements / deafult trust measures from graph
                             improvements = {
-                                "complexity_score": 0
+                                "complexity_score": 0,
+                                "reasoning": "",
+                                "sql_query": "",
+                                "sql_data": None
                             }
-
-                    response_container = st.container()
-                    with response_container:
-                        st.markdown(response)
-                        st.markdown("") #used to do css referencing, here acts as a placeholder for the spinner message
-                        st.markdown(f"Query Complexity: {improvements['complexity_score']}%")
-
 
         st.session_state.messages.append({
             "role": "assistant",
             "content": response,
-            "complexity_scoring": f"Query Complexity: {improvements['complexity_score']}%"
+            "complexity_scoring": f"Query Complexity: {improvements['complexity_score']}%",
+            "sql_query": f"SQL: {improvements['sql_query']}",
+            "sql_data": improvements["sql_data"],
+            "reasoning": improvements["reasoning"]
         })
+
+        st.rerun() #reload the page so message goes into session state

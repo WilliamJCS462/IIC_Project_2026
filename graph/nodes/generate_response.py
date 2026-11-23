@@ -1,12 +1,18 @@
 import openai
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel
 from utils.errors import get_error_code
 
 load_dotenv()
 
+#Using a structured output for robustness
+class AnswerResponse(BaseModel):
+    answer: str
+    reasoning: str
+
 #generate an answer to the question given the data provided by the SQL query
-def generate_answer_response(query: str, data: str):
+def generate_answer_response(query: str, data: str, trust_measures: dict):
     try: 
         system_prompt = """
             TASK
@@ -22,6 +28,7 @@ def generate_answer_response(query: str, data: str):
             4. Keep responses consice
             5. Do not include a table in your response
             6. If you cannot answer the question from the results, let the user know
+            7. Provide a breif explaintion of how the answer was derived from the provided data
 
         """
 
@@ -42,10 +49,15 @@ def generate_answer_response(query: str, data: str):
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.responses.parse(
             model="gpt-4o-mini",
-            input=full_prompt
+            input=full_prompt,
+            text_format=AnswerResponse
         )
 
-        return {"ai_response": response.output_text}
+        result = response.output_parsed
+
+        reasoning = f"\n\nAnswer Generation Reasoning:  \n{result.reasoning}"
+        trust_measures["reasoning"] += reasoning #append to reasoning
+        return {"ai_response": result.answer, "trust_measures": trust_measures}
 
     except Exception as e:
         return{

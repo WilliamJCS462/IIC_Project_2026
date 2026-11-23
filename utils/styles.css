@@ -38,6 +38,11 @@ div :has(> .st-key-chatbot) {
     padding: 2rem;
 }
 
+/* Fixes gap caused by conditional styling */
+.stMainBlockContainer > div {
+    gap: 0;
+}
+
 /* ensures boxes fill out properly */
 .stVerticalBlock {
     flex: 1;
@@ -178,6 +183,12 @@ div:has( > .st-key-accuracy_score) {
     color: grey;
 }
 
+/* SQL */
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(4) * {
+    font-size: small;
+    color: grey;
+}
+
 .stChatMessage:has([aria-label="Chat message from assistant"]) > :first-child * {
     color: #112547;
 }
@@ -185,6 +196,28 @@ div:has( > .st-key-accuracy_score) {
 /* Message Text */
 .stChatMessage:has([aria-label="Chat message from assistant"]) * {
     text-align: left;
+}
+
+/*Hides popover button background */
+button[data-testid="stPopoverButton"], button[data-testid="stPopoverButton"]:hover {
+    border: none;
+    background-color: transparent;
+}
+
+/* Hides popover arrow */
+button[data-testid="stPopoverButton"] > div > div:nth-child(2) {
+    display: none;
+}
+
+[class*="st-key-data_button_"] * , [class*="st-key-data_button_"] *:hover{
+    border: none;
+    background-color: transparent;
+    color: #6993FF;
+    font-size: small;
+    text-align: left;
+    padding: 0;
+    align-items: flex-start;
+    min-height: 0;
 }
 
 .stSidebar {

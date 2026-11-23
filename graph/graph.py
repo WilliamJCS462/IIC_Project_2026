@@ -22,7 +22,7 @@ class State(TypedDict):
 
 #function wrappers, these just call functions from the nodes
 def call_generate_sql(state: State):
-    result = generate_sql(state["user_message"])
+    result = generate_sql(state["user_message"], state["trust_measures"])
     return result
 
 def call_calculate_complexity(state: State):
@@ -30,11 +30,11 @@ def call_calculate_complexity(state: State):
     return result
 
 def call_run_sql(state: State):
-    result = run_sql(state["sql_query"])
+    result = run_sql(state["sql_query"], state["trust_measures"])
     return result
 
 def call_generate_answer_response(state: State):
-    result = generate_answer_response(state["user_message"], state["sql_data"])
+    result = generate_answer_response(state["user_message"], state["sql_data"], state["trust_measures"])
     return result
 
 def call_generate_error_response(state: State):
@@ -104,7 +104,10 @@ graph.add_edge("generate_error_response", END)
 def run_graph(user_input: str):
     #initialise state
     default_trust_measures = {
-        "complexity_score": 0
+        "complexity_score": 0,
+        "reasoning": "",
+        "sql_query": "",
+        "sql_data": None,
     }
     state = {
         "user_message": user_input,
