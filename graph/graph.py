@@ -1,9 +1,10 @@
+import yaml
 from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, List
 from pathlib import Path
 from dotenv import load_dotenv
 
-from graph.nodes.generate_sql import generate_sql
+from graph.nodes.generate_sql import generate_sql, calculate_complexity
 from graph.nodes.run_sql import run_sql
 from graph.nodes.generate_response import generate_answer_response, generate_error_response
 
@@ -17,10 +18,15 @@ class State(TypedDict):
     ai_response: str | None #AI generated response to user prompt
     safe: bool #False when an error has occured
     error_code: str | None #Code to indicate which error has occured
+    trust_measures: dict | None #Stores any trust measure data, dictionary so data can be added depending on trust measures selected
 
 #function wrappers, these just call functions from the nodes
 def call_generate_sql(state: State):
     result = generate_sql(state["user_message"])
+    return result
+
+def call_calculate_complexity(state: State):
+    result = calculate_complexity(state["sql_query"], state["trust_measures"])
     return result
 
 def call_run_sql(state: State):
@@ -48,6 +54,7 @@ graph.add_node("generate_sql", call_generate_sql)
 graph.add_node("run_sql", call_run_sql)
 graph.add_node("generate_answer_response", call_generate_answer_response)
 graph.add_node("generate_error_response", call_generate_error_response)
+graph.add_node("calculate_complexity", call_calculate_complexity)
 
 #conditional edges for error routing
 graph.add_conditional_edges(
@@ -60,10 +67,18 @@ graph.add_conditional_edges(
 )
 graph.add_conditional_edges(
     "generate_sql",
+    lambda s: route_error(s, "calculate_complexity"),
+    {
+        "calculate_complexity": "calculate_complexity",
+        "generate_error_response": "generate_error_response"
+     }
+)
+graph.add_conditional_edges(
+    "calculate_complexity",
     lambda s: route_error(s, "run_sql"),
     {
         "run_sql": "run_sql",
-        "generate_error_response": "generate_error_response"
+        "generate_error_response": "generate_error_response",
      }
 )
 graph.add_conditional_edges(
@@ -88,13 +103,17 @@ graph.add_edge("generate_error_response", END)
 #run graph, called for every interaction
 def run_graph(user_input: str):
     #initialise state
+    default_trust_measures = {
+        "complexity_score": 0
+    }
     state = {
         "user_message": user_input,
         "sql_query": None,
         "sql_data": None,
         "ai_response": None,
         "safe": True,
-        "error_code": None
+        "error_code": None,
+        "trust_measures": default_trust_measures
     }
 
     #check for empty or whitespace user input
@@ -107,4 +126,4 @@ def run_graph(user_input: str):
     graph_result = chatbot.invoke(state)
 
     #return just the AI response
-    return graph_result["ai_response"]
+    return (graph_result["ai_response"], graph_result["trust_measures"])

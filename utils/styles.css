@@ -137,6 +137,16 @@ div:has( > .st-key-accuracy_score) {
     text-align: right;
 }
 
+/* The number of containers this is wrapped in changes based on weather its the current message or a repeated message...*/
+.stChatMessage:has([aria-label="Chat message from user"]) > :nth-child(2) > div > div > div{
+    gap: 0;
+}
+
+/* This is wrapped in like a million containers for some reason*/
+.stChatMessage:has([aria-label="Chat message from user"]) > :nth-child(2) > div > div > div > div > div{
+    gap: 0;
+}
+
 /* AI Message */
 .stChatMessage:has([aria-label="Chat message from assistant"]) {
     background-color: #112547;
@@ -150,6 +160,22 @@ div:has( > .st-key-accuracy_score) {
 .stChatMessage:has([aria-label="Chat message from assistant"]) > :first-child {
     background-color: white;
     border: None;
+}
+
+/* The number of containers this is wrapped in changes based on weather its the current message or a repeated message...*/
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) > div > div > div{
+    gap: 0;
+}
+
+/* This is wrapped in like a million containers for some reason*/
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) > div > div > div > div > div{
+    gap: 0;
+}
+
+/* Complexity Score */
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(3) * {
+    font-size: small;
+    color: grey;
 }
 
 .stChatMessage:has([aria-label="Chat message from assistant"]) > :first-child * {
