@@ -1,14 +1,21 @@
 import openai
 import os
 import sqlglot
+import json
 from sqlglot import exp
+from pydantic import BaseModel
 from dotenv import load_dotenv
 from database.database import connection
 from utils.errors import get_error_code
 
 load_dotenv()
 
-def generate_sql(prompt: str):
+#Using a structured output for robustness
+class SQLResponse(BaseModel):
+    sql: str
+    reasoning: str
+
+def generate_sql(prompt: str, trust_measures: dict):
     try:
         #fetch database schema
         schema = connection.execute("DESCRIBE superstore").fetchall()
@@ -18,7 +25,7 @@ def generate_sql(prompt: str):
 
             You are a SQL assistant
 
-            Your role is to generate some SQL to query a flat file database to help answer a user question
+            Your role is to generate some SQL to query a flat file database to help answer a user question and explain why you have chosen to generate the query the way you have
 
             Rules:
             - Return an ONLY an SQL query and nothing else
@@ -27,6 +34,7 @@ def generate_sql(prompt: str):
             - Only use columns from the schema
             - The returned SQL query must be syntactically correct
             - Generate a query that answers the question as best as possible
+            - Provide a breif explaination of how the query was generated
         """
 
         user_prompt = f"""
@@ -46,10 +54,13 @@ def generate_sql(prompt: str):
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.responses.parse(
             model="gpt-4o-mini",
-            input=full_prompt
+            input=full_prompt,
+            text_format=SQLResponse
         )
 
-        sql_raw = response.output_text
+        result = response.output_parsed
+
+        sql_raw = result.sql
         sql_trimmed = sql_raw.replace("'''sql", "")
         sql_trimmed = sql_trimmed.replace("'''", "")
         sql_trimmed = sql_trimmed.strip()
@@ -63,7 +74,9 @@ def generate_sql(prompt: str):
             LIMIT 10;
         """
 
-        return {"sql_query": sql_limited}
+        trust_measures["reasoning"] = f"SQL Generation Reasoning:  \n{result.reasoning}"
+        trust_measures["sql_query"] = sql_trimmed #easier to pass the non limited query for reability
+        return {"sql_query": sql_limited, "trust_measures": trust_measures}
 
     except Exception as e:
         return {
