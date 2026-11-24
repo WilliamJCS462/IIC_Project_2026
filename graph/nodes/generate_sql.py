@@ -55,7 +55,6 @@ def generate_sql(prompt: str, trust_measures: dict):
         """
 
         full_prompt = user_prompt + system_prompt
-        print(full_prompt)
 
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.responses.parse(
@@ -190,7 +189,6 @@ def calculate_complexity(query: str, trust_measures: dict):
         return {"trust_measures": trust_measures}
 
     except Exception as e:
-        print (e)
         return {
             "safe": False,
             "error_code": get_error_code(e)

@@ -20,6 +20,9 @@ class State(TypedDict):
     trust_measures: dict | None #Stores any trust measure data, dictionary so data can be added depending on trust measures selected
 
 #function wrappers, these just call functions from the nodes
+def dummy_function(state: State):
+    return {}
+
 def call_gather_expanded_context(state: State):
     result = gather_expanded_context(state["trust_measures"])
     return result
@@ -57,6 +60,7 @@ def route_error(state: State, next_node: str):
 #build graph
 graph = StateGraph(State)
 
+graph.add_node("start_node", dummy_function)
 graph.add_node("gather_expanded_context", call_gather_expanded_context)
 graph.add_node("generate_sql", call_generate_sql)
 graph.add_node("calculate_complexity", call_calculate_complexity)
@@ -68,6 +72,14 @@ graph.add_node("generate_error_response", call_generate_error_response)
 #conditional edges for error routing
 graph.add_conditional_edges(
     START,
+    lambda s: route_error(s, "start_node"),
+    {
+        "start_node": "start_node",
+        "generate_error_response": "generate_error_response"
+     }
+)
+graph.add_conditional_edges(
+    "start_node",
     lambda s: route_error(s, "gather_expanded_context"),
     {
         "gather_expanded_context": "gather_expanded_context",
@@ -126,7 +138,7 @@ graph.add_conditional_edges(
 graph.add_edge("generate_error_response", END)
 
 #run graph, called for every interaction
-def run_graph(user_input: str):
+def run_graph(user_input: str, status_callback=None):
     #initialise state
     default_trust_measures = {
         "complexity_score": 0,
@@ -152,9 +164,43 @@ def run_graph(user_input: str):
         state["safe"] = False
         state["error_code"] = "USER_INPUT_MISSING"
 
+    #stage logging mapping
+    #we should log some nodes based on whether the user has enabled them (even if they always execute)
+    expand_context_logging = "Generating SQL"
+    calculate_complexity_logging = "Running SQL"
+    drill_down_logging = "Generating Response"
+
+    improvements_path = base_dir / "config" / "improvements.yaml"
+    if improvements_path.exists():
+        with open(improvements_path, "r") as file:
+            improvements = yaml.safe_load(file) or {}
+            if "expanded_context" in improvements and improvements["expanded_context"]:
+                expand_context_logging = "Generating Expanded Context"
+            if "complexity_scoring" in improvements and improvements["complexity_scoring"]:
+                calculate_complexity_logging = "Calculating Complexity"
+            if "drill_down" in improvements and improvements["drill_down"]:
+                drill_down_logging = "Generating Supporting Data"
+
+    next_node_names = {
+        "start_node": expand_context_logging,
+        "gather_expanded_context": "Generating SQL",
+        "generate_sql": calculate_complexity_logging,
+        "calculate_complexity": "Running SQL",
+        "run_sql": drill_down_logging,
+        "generate_drill_down_data": "Generating Response",
+        "generate_answer_response": None,
+        "generate_error_response": None
+    }
+
     #compile and invoke graph with the intialised state
     chatbot = graph.compile()
-    graph_result = chatbot.invoke(state)
+    if status_callback is not None:
+        for event in chatbot.stream(state):
+            current_node = list(event.keys())[0]
+            status_callback(next_node_names[current_node])
+            graph_result = event[current_node]
+    else:
+        graph_result = chatbot.invoke(state)
 
     #return just the AI response
     return (graph_result["ai_response"], graph_result["trust_measures"])
