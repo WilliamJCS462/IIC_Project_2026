@@ -177,14 +177,20 @@ div:has( > .st-key-accuracy_score) {
     gap: 0;
 }
 
-/* Complexity Score */
+/* Expanded Context Notification */
 .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(3) * {
     font-size: small;
     color: grey;
 }
 
-/* SQL */
+/* Complexity Score */
 .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(4) * {
+    font-size: small;
+    color: grey;
+}
+
+/* SQL */
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(5) * {
     font-size: small;
     color: grey;
 }

@@ -57,7 +57,8 @@ default_config = {
         "show_sql": False,
         "show_data": False,
         "show_reasoning": False,
-        "drill_down": False
+        "drill_down": False,
+        "expanded_context": False
         }
 
 if improvements_path.exists():
@@ -132,6 +133,15 @@ with st.sidebar:
     with open(improvements_path, "w") as file:
         yaml.safe_dump(st.session_state.improvements, file)
 
+    #expanbded context
+    if st.toggle(label="Use Expanded Context", key="expanded_context", value=st.session_state.improvements["expanded_context"], help="Use expanded context to generate the prompt. This provides the assistant with more information about the database. This should improve accuracy and reduce the risk of hallucenations"):
+        st.session_state.improvements["expanded_context"] = True
+    else:
+        st.session_state.improvements["expanded_context"] = False
+    #update config file
+    with open(improvements_path, "w") as file:
+        yaml.safe_dump(st.session_state.improvements, file)
+
 #conditional css styling to hide elements
 if not st.session_state.improvements["accuracy_scoring"]:
     st.markdown("""
@@ -146,7 +156,7 @@ if not st.session_state.improvements["complexity_scoring"]:
     st.markdown("""
         <style>
 
-        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(3) {
+        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(4) {
             display: None;
         }
     """, unsafe_allow_html=True)
@@ -155,7 +165,7 @@ if not st.session_state.improvements["show_sql"]:
     st.markdown("""
         <style>
 
-        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(4) {
+        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(5) {
             display: None;
         }
     """, unsafe_allow_html=True)
@@ -164,7 +174,7 @@ if not st.session_state.improvements["show_data"]:
     st.markdown("""
         <style>
 
-        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(5) {
+        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(6) {
             display: None;
         }
     """, unsafe_allow_html=True)
@@ -182,7 +192,7 @@ if not st.session_state.improvements["drill_down"]:
     st.markdown("""
         <style>
 
-        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(6) {
+        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(7) {
             display: None;
         }
     """, unsafe_allow_html=True)
@@ -241,6 +251,10 @@ with st.container(key="chatbot"):
                         else:
                             st.markdown(message["content"])
                         st.markdown("") #used to do css referencing, here acts as a placeholder for the spinner message
+                        expanded_context_notification = ""
+                        if message["expanded_context"] != "":
+                            expanded_context_notification = "*This answer was generated with expanded context"
+                        st.markdown(expanded_context_notification)
                         st.markdown(message["complexity_scoring"])
                         st.markdown(message["sql_query"])
                         if message["role"] == "assistant":
@@ -262,7 +276,8 @@ with st.container(key="chatbot"):
             "sql_data": "",
             "reasoning": "",
             "drill_down_data": "",
-            "drill_down_sql": ""
+            "drill_down_sql": "",
+            "expanded_context": ""
         })
 
         with messages:
@@ -284,7 +299,8 @@ with st.container(key="chatbot"):
                                 "sql_query": "",
                                 "sql_data": None,
                                 "drill_down_data": None,
-                                "drill_down_sql": ""
+                                "drill_down_sql": "",
+                                "expanded_context": ""
                             }
 
         st.session_state.messages.append({
@@ -295,7 +311,8 @@ with st.container(key="chatbot"):
             "sql_data": improvements["sql_data"],
             "reasoning": improvements["reasoning"],
             "drill_down_data": improvements["drill_down_data"],
-            "drill_down_sql": improvements["drill_down_sql"]
+            "drill_down_sql": improvements["drill_down_sql"],
+            "expanded_context": improvements["expanded_context"]
         })
 
         st.rerun() #reload the page so message goes into session state
