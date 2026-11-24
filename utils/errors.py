@@ -8,4 +8,8 @@ error_codes = {
 }
 
 def get_error_code(error: Exception):
-    return error_codes.get(type(error), "UNKNOWN_ERROR")
+    if type(error) in error_codes:
+        return error_codes.get(type(error))
+    else:
+        print (f"Unknown Error: \n{error}")
+        return "UNKNOWN_ERROR"

@@ -220,6 +220,17 @@ button[data-testid="stPopoverButton"] > div > div:nth-child(2) {
     min-height: 0;
 }
 
+[class*="st-key-drill_down_button_"] * , [class*="st-key-drill_down_button_"] *:hover{
+    border: none;
+    background-color: transparent;
+    color: #6993FF;
+    font-size: small;
+    text-align: left;
+    padding: 0;
+    align-items: flex-start;
+    min-height: 0;
+}
+
 .stSidebar {
     background-color: #0C1A32;
 }
