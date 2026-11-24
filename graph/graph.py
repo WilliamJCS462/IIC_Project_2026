@@ -3,7 +3,7 @@ from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, List
 from pathlib import Path
 from dotenv import load_dotenv
-from graph.nodes.generate_sql import generate_sql, calculate_complexity
+from graph.nodes.generate_sql import generate_sql, calculate_complexity, gather_expanded_context
 from graph.nodes.run_sql import run_sql, generate_drill_down_data
 from graph.nodes.generate_response import generate_answer_response, generate_error_response
 
@@ -20,6 +20,10 @@ class State(TypedDict):
     trust_measures: dict | None #Stores any trust measure data, dictionary so data can be added depending on trust measures selected
 
 #function wrappers, these just call functions from the nodes
+def call_gather_expanded_context(state: State):
+    result = gather_expanded_context(state["trust_measures"])
+    return result
+
 def call_generate_sql(state: State):
     result = generate_sql(state["user_message"], state["trust_measures"])
     return result
@@ -53,6 +57,7 @@ def route_error(state: State, next_node: str):
 #build graph
 graph = StateGraph(State)
 
+graph.add_node("gather_expanded_context", call_gather_expanded_context)
 graph.add_node("generate_sql", call_generate_sql)
 graph.add_node("calculate_complexity", call_calculate_complexity)
 graph.add_node("run_sql", call_run_sql)
@@ -63,6 +68,14 @@ graph.add_node("generate_error_response", call_generate_error_response)
 #conditional edges for error routing
 graph.add_conditional_edges(
     START,
+    lambda s: route_error(s, "gather_expanded_context"),
+    {
+        "gather_expanded_context": "gather_expanded_context",
+        "generate_error_response": "generate_error_response"
+     }
+)
+graph.add_conditional_edges(
+    "gather_expanded_context",
     lambda s: route_error(s, "generate_sql"),
     {
         "generate_sql": "generate_sql",
@@ -121,7 +134,8 @@ def run_graph(user_input: str):
         "sql_query": "",
         "sql_data": None,
         "drill_down_data": None,
-        "drill_down_sql": ""
+        "drill_down_sql": "",
+        "expanded_context": ""
     }
     state = {
         "user_message": user_input,

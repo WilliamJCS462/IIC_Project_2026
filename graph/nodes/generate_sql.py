@@ -1,14 +1,17 @@
 import openai
 import os
 import sqlglot
-import json
+import yaml
 from sqlglot import exp
+from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from database.database import connection
 from utils.errors import get_error_code
 
 load_dotenv()
+
+base_dir = Path(__file__).resolve().parent.parent.parent
 
 #Using a structured output for robustness
 class SQLResponse(BaseModel):
@@ -47,9 +50,12 @@ def generate_sql(prompt: str, trust_measures: dict):
 
             {schema}
 
+            {trust_measures["expanded_context"]}
+
         """
 
         full_prompt = user_prompt + system_prompt
+        print(full_prompt)
 
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         response = client.responses.parse(
@@ -181,7 +187,64 @@ def calculate_complexity(query: str, trust_measures: dict):
 
         total_score = agg_score + filt_score + ord_score + comb_score
         trust_measures["complexity_score"] = total_score
-        return trust_measures
+        return {"trust_measures": trust_measures}
+
+    except Exception as e:
+        print (e)
+        return {
+            "safe": False,
+            "error_code": get_error_code(e)
+        }
+
+def gather_expanded_context(trust_measures: dict):
+    try:
+        expanded_context = ""
+        improvements_path = base_dir / "config" / "improvements.yaml"
+
+        if improvements_path.exists():
+            with open(improvements_path, "r") as file:
+                improvements = yaml.safe_load(file) or {}
+                if "expanded_context" in improvements and improvements["expanded_context"]:
+                    schema = connection.execute("DESCRIBE superstore").fetchall()
+                    columns = [col[0] for col in schema]
+                    #no of rows
+                    no_of_rows_query = f"""SELECT COUNT(*) FROM superstore;"""
+                    result = connection.execute(no_of_rows_query).df()
+                    no_of_rows = result.iloc[0,0]
+                    for column in columns:
+                        column_sql = str(column)
+                        if " " in column_sql:
+                            column_sql = f'"{column_sql}"'#for catching double word columns
+                        #unique values
+                        unique_values_query = f"""SELECT COUNT(DISTINCT {column_sql}) FROM superstore;"""
+                        result = connection.execute(unique_values_query).df()
+                        count = result.iloc[0,0] #returns the actual count
+                        cardinality = count/no_of_rows
+
+                        #top values
+                        top_values_query = f"""
+                            SELECT {column_sql}, COUNT(*) AS count
+                            FROM superstore
+                            GROUP BY {column_sql}
+                            ORDER BY COUNT(*)
+                            LIMIT 5;
+                        """
+                        result = connection.execute(top_values_query).df()
+                        top_values_string = ""
+                        for _, row in result.iterrows():
+                            percentage = row["count"] / no_of_rows * 100
+                            top_values_string += f"'{row[column]}': {percentage:.1f}%\n"
+
+                        expanded_context += f"""
+                            Column - {column}
+                            Number of Unique Values - {count}
+                            Cardinality Ratio - {cardinality}%
+                            Top {len(result)} Values:
+                            {top_values_string}\n
+                        """
+
+        trust_measures["expanded_context"] = expanded_context
+        return {"trust_measures": trust_measures}
 
     except Exception as e:
         print (e)
