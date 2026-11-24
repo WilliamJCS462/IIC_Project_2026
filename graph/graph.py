@@ -3,9 +3,8 @@ from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, List
 from pathlib import Path
 from dotenv import load_dotenv
-
 from graph.nodes.generate_sql import generate_sql, calculate_complexity
-from graph.nodes.run_sql import run_sql
+from graph.nodes.run_sql import run_sql, generate_drill_down_data
 from graph.nodes.generate_response import generate_answer_response, generate_error_response
 
 base_dir = Path(__file__).resolve().parent.parent
@@ -33,6 +32,10 @@ def call_run_sql(state: State):
     result = run_sql(state["sql_query"], state["trust_measures"])
     return result
 
+def call_generate_drill_down_data(state: State):
+    result = generate_drill_down_data(state["sql_query"], state["trust_measures"])
+    return result
+
 def call_generate_answer_response(state: State):
     result = generate_answer_response(state["user_message"], state["sql_data"], state["trust_measures"])
     return result
@@ -51,10 +54,11 @@ def route_error(state: State, next_node: str):
 graph = StateGraph(State)
 
 graph.add_node("generate_sql", call_generate_sql)
+graph.add_node("calculate_complexity", call_calculate_complexity)
 graph.add_node("run_sql", call_run_sql)
+graph.add_node("generate_drill_down_data", call_generate_drill_down_data)
 graph.add_node("generate_answer_response", call_generate_answer_response)
 graph.add_node("generate_error_response", call_generate_error_response)
-graph.add_node("calculate_complexity", call_calculate_complexity)
 
 #conditional edges for error routing
 graph.add_conditional_edges(
@@ -83,6 +87,14 @@ graph.add_conditional_edges(
 )
 graph.add_conditional_edges(
     "run_sql",
+    lambda s: route_error(s, "generate_drill_down_data"),
+    {
+        "generate_drill_down_data": "generate_drill_down_data",
+        "generate_error_response": "generate_error_response"
+     }
+)
+graph.add_conditional_edges(
+    "generate_drill_down_data",
     lambda s: route_error(s, "generate_answer_response"),
     {
         "generate_answer_response": "generate_answer_response",
@@ -108,6 +120,8 @@ def run_graph(user_input: str):
         "reasoning": "",
         "sql_query": "",
         "sql_data": None,
+        "drill_down_data": None,
+        "drill_down_sql": ""
     }
     state = {
         "user_message": user_input,

@@ -32,12 +32,15 @@ def load_metrics():
         accuracy_message = f"Estimated Accuracy: Untested"
     return accuracy_message
 
-@st.dialog("Query Data")
-def data_popup(df):
+@st.dialog("Data")
+def data_popup(df, title, extra: str=""):
+    st.subheader(title)
     if (df is not None) and not isinstance(df, str):
         st.dataframe(df)
     else:
         st.markdown("No data")
+    if extra != "":
+        st.code(extra, language="sql")
 
 st.set_page_config(
     page_title="SQL Assistant",
@@ -53,12 +56,14 @@ default_config = {
         "complexity_scoring" : False,
         "show_sql": False,
         "show_data": False,
-        "show_reasoning": False
+        "show_reasoning": False,
+        "drill_down": False
         }
 
 if improvements_path.exists():
     with open(improvements_path, "r") as file:
-        if (yaml.safe_load(file) or default_config).keys() == default_config.keys(): #check for missing config
+        if (yaml.safe_load(file)).keys() == default_config.keys(): #check for missing config
+            file.seek(0)
             st.session_state.improvements = yaml.safe_load(file) or default_config
         else:
             st.session_state.improvements = default_config
@@ -68,6 +73,7 @@ else:
 
     #create config file if not found
     with open(improvements_path, "w") as file:
+        print("Making File")
         yaml.safe_dump(st.session_state.improvements, file)
 
 with st.sidebar:
@@ -109,10 +115,19 @@ with st.sidebar:
         yaml.safe_dump(st.session_state.improvements, file)
 
     #show reasoning
-    if st.toggle(label="Show Reasoning", key="show_reasoning", value=st.session_state.improvements["show_reasoning"], help="Shows the assistants reasoning behind its response"):
+    if st.toggle(label="Show Reasoning", key="show_reasoning", value=st.session_state.improvements["show_reasoning"], help="Shows the assistants reasoning behind its response."):
         st.session_state.improvements["show_reasoning"] = True
     else:
         st.session_state.improvements["show_reasoning"] = False
+    #update config file
+    with open(improvements_path, "w") as file:
+        yaml.safe_dump(st.session_state.improvements, file)
+
+    #drill down data
+    if st.toggle(label="Show Support Data", key="drill_down", value=st.session_state.improvements["drill_down"], help="Shows supporting evidence based on the data generated."):
+        st.session_state.improvements["drill_down"] = True
+    else:
+        st.session_state.improvements["drill_down"] = False
     #update config file
     with open(improvements_path, "w") as file:
         yaml.safe_dump(st.session_state.improvements, file)
@@ -159,6 +174,15 @@ if not st.session_state.improvements["show_reasoning"]:
         <style>
 
         [data-testid="stPopoverButton"]{
+            display: None;
+        }
+    """, unsafe_allow_html=True)
+
+if not st.session_state.improvements["drill_down"]:
+    st.markdown("""
+        <style>
+
+        .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(6) {
             display: None;
         }
     """, unsafe_allow_html=True)
@@ -221,7 +245,9 @@ with st.container(key="chatbot"):
                         st.markdown(message["sql_query"])
                         if message["role"] == "assistant":
                             if st.button("View Data", key=f"data_button_{i // 2}"): #we will use tertiary buttons for display
-                                data_popup(message["sql_data"])
+                                data_popup(df=message["sql_data"], title="Query Data")
+                            if st.button("View Supporting Data", key=f"drill_down_button_{i // 2}"): #we will use tertiary buttons for display
+                                data_popup(df=message["drill_down_data"], title="Supporting Data", extra=message["drill_down_sql"])
 
     with st.container(key="prompt_bar"):
         prompt = st.chat_input("Ask the assistant a question...")
@@ -234,7 +260,9 @@ with st.container(key="chatbot"):
             "complexity_scoring": "",
             "sql_query": "",
             "sql_data": "",
-            "reasoning": ""
+            "reasoning": "",
+            "drill_down_data": "",
+            "drill_down_sql": ""
         })
 
         with messages:
@@ -254,7 +282,9 @@ with st.container(key="chatbot"):
                                 "complexity_score": 0,
                                 "reasoning": "",
                                 "sql_query": "",
-                                "sql_data": None
+                                "sql_data": None,
+                                "drill_down_data": None,
+                                "drill_down_sql": ""
                             }
 
         st.session_state.messages.append({
@@ -263,7 +293,9 @@ with st.container(key="chatbot"):
             "complexity_scoring": f"Query Complexity: {improvements['complexity_score']}%",
             "sql_query": f"SQL: {improvements['sql_query']}",
             "sql_data": improvements["sql_data"],
-            "reasoning": improvements["reasoning"]
+            "reasoning": improvements["reasoning"],
+            "drill_down_data": improvements["drill_down_data"],
+            "drill_down_sql": improvements["drill_down_sql"]
         })
 
         st.rerun() #reload the page so message goes into session state

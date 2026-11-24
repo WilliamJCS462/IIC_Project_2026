@@ -22,8 +22,8 @@ def run_accuracy_tests(progress_callback=None): #here we pass a streamlit progre
         original_run_sql = graph_module.run_sql
 
         #patch the interior function so we can extract sql_data
-        def patched_run_sql(query):
-            result = original_run_sql(query)
+        def patched_run_sql(query, trust_measures):
+            result = original_run_sql(query, trust_measures)
             if "sql_data" in result:
                 #so result has same format as fetchall() result
                 sql_data = result["sql_data"].itertuples(index=False, name=None)
@@ -57,7 +57,7 @@ def run_accuracy_tests(progress_callback=None): #here we pass a streamlit progre
                 test_accuracies.append(hits/len(golden_flat))
 
             #Error means a failed test, 0 accuracy
-            except:
+            except Exception as e:
                 test_accuracies.append(0)
 
             #increment progress bar via callback
