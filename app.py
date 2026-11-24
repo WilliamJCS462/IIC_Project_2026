@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import yaml
+import time
 from dotenv import load_dotenv, dotenv_values
 from pathlib import Path
 from graph.graph import run_graph
@@ -58,7 +59,8 @@ default_config = {
         "show_data": False,
         "show_reasoning": False,
         "drill_down": False,
-        "expanded_context": False
+        "expanded_context": False,
+        "logging": False
         }
 
 if improvements_path.exists():
@@ -133,11 +135,20 @@ with st.sidebar:
     with open(improvements_path, "w") as file:
         yaml.safe_dump(st.session_state.improvements, file)
 
-    #expanbded context
+    #expanded context
     if st.toggle(label="Use Expanded Context", key="expanded_context", value=st.session_state.improvements["expanded_context"], help="Use expanded context to generate the prompt. This provides the assistant with more information about the database. This should improve accuracy and reduce the risk of hallucenations"):
         st.session_state.improvements["expanded_context"] = True
     else:
         st.session_state.improvements["expanded_context"] = False
+    #update config file
+    with open(improvements_path, "w") as file:
+        yaml.safe_dump(st.session_state.improvements, file)
+
+    #logging
+    if st.toggle(label="Show Internal Processing", key="logging", value=st.session_state.improvements["logging"], help="Display the internal processing stages of the assistant. Replaces the thinking bar in assistant responses."):
+        st.session_state.improvements["logging"] = True
+    else:
+        st.session_state.improvements["logging"] = False
     #update config file
     with open(improvements_path, "w") as file:
         yaml.safe_dump(st.session_state.improvements, file)
@@ -287,21 +298,35 @@ with st.container(key="chatbot"):
             with st.chat_message("assistant", avatar=":material/robot_2:"):
                 response_placeholder = st.empty() #I don't know why this works but found this solution to duplicate chat messages appearing under the assistant
                 with response_placeholder.container():
-                    with st.spinner("Thinking..."):
-                        try:
-                            response, improvements = run_graph(prompt)
-                        except Exception as e:
-                            response = f"ERROR - Error Codes: GRAPH_RUN_FAILURE, {get_error_code(e)}"
-                            #default improvements / deafult trust measures from graph
-                            improvements = {
-                                "complexity_score": 0,
-                                "reasoning": "",
-                                "sql_query": "",
-                                "sql_data": None,
-                                "drill_down_data": None,
-                                "drill_down_sql": "",
-                                "expanded_context": ""
-                            }
+                    try:
+                        if not st.session_state.improvements["logging"]:
+                            with st.spinner("Thinking..."):
+                                response, improvements = run_graph(prompt)
+                        else:
+                            process_stage = st.empty()
+                            completed_stages = ["Initialising"]
+                            def update_stage(stage):
+                                if stage not in completed_stages and stage is not None:
+                                    completed_stages.append(stage)
+                                if stage is not None:
+                                    text = "  \n".join(f"✅ {n}" for n in completed_stages[:-1]) + f"  \n🔄 {completed_stages[-1]}"
+                                    process_stage.text(text)
+                                        
+                                else:
+                                    process_stage.text("  \n".join(f"✅ {n}" for n in completed_stages)) #if stage name is None, graph has finished running
+                            response, improvements = run_graph(prompt, status_callback=update_stage)
+                    except Exception as e:
+                        response = f"ERROR - Error Codes: GRAPH_RUN_FAILURE, {get_error_code(e)}"
+                        #default improvements / deafult trust measures from graph
+                        improvements = {
+                            "complexity_score": 0,
+                            "reasoning": "",
+                            "sql_query": "",
+                            "sql_data": None,
+                            "drill_down_data": None,
+                            "drill_down_sql": "",
+                            "expanded_context": ""
+                        }
 
         st.session_state.messages.append({
             "role": "assistant",
@@ -315,4 +340,5 @@ with st.container(key="chatbot"):
             "expanded_context": improvements["expanded_context"]
         })
 
+        time.sleep(0.5) #slight delay for logging to show
         st.rerun() #reload the page so message goes into session state
