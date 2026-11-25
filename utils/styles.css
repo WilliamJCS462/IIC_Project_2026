@@ -183,14 +183,20 @@ div:has( > .st-key-accuracy_score) {
     color: grey;
 }
 
-/* Complexity Score */
+/* Secondary Auditing Notification */
 .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(4) * {
     font-size: small;
     color: grey;
 }
 
-/* SQL */
+/* Complexity Score */
 .stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(5) * {
+    font-size: small;
+    color: grey;
+}
+
+/* SQL */
+.stChatMessage:has([aria-label="Chat message from assistant"]) > :nth-child(2) :nth-child(6) * {
     font-size: small;
     color: grey;
 }

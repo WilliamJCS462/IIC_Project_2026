@@ -126,16 +126,12 @@ def calculate_complexity(query: str, trust_measures: dict):
         comb_score = 0
 
         #strip and parse query
-        pre = """
-            SELECT * 
-            FROM (
-        """
-
-        suf = """
-            ) t
-            LIMIT 10;
-        """
-        query_stripped = query.removeprefix(pre).removesuffix(suf)
+        strip_parsed = sqlglot.parse_one(query)
+        inner = strip_parsed.find(exp.Subquery)
+        if inner:
+            query_stripped = inner.this.sql()
+        else:
+            query_stripped = query
         parsed = sqlglot.parse_one(query_stripped)
 
         #Aggregate Score
@@ -250,4 +246,96 @@ def gather_expanded_context(trust_measures: dict):
             "safe": False,
             "error_code": get_error_code(e)
         }
-    
+
+
+def repair_sql(prompt: str, sql: str, trust_measures: dict):
+    try:
+        #fetch database schema
+        schema = connection.execute("DESCRIBE superstore").fetchall()
+
+        system_prompt = """
+            TASK
+
+            You are a SQL assistant
+
+            Your role is to generate some SQL to query a flat file database to help answer a user question and explain why you have chosen to generate the query the way you have
+            The original SQL has been audited and one or more issues have been identified with it.
+            Your task is to repair the SQL to address the issues
+
+            Rules:
+            - Return an ONLY an SQL query and nothing else
+            - Do not include markdown, '''sql fences or any text that is not SQL
+            - Only use the table superstore
+            - Only use columns from the schema
+            - The returned SQL query must be syntactically correct
+            - Ensure query that answers the question as best as possible
+            - Provide a breif explaination of how the query was generated
+            - Only modify the SQL necessary to fix the reported issues
+            - Do not mention the review or repair process or explain your changes
+
+        """
+
+        #strip and parse query
+        parsed = sqlglot.parse_one(sql)
+        inner = parsed.find(exp.Subquery)
+        if inner:
+            query_stripped = inner.this.sql()
+        else:
+            query_stripped = sql
+
+        user_prompt = f"""
+
+            User Question:
+
+            {prompt}
+
+            Database Schema:
+
+            {schema}
+
+            {trust_measures["expanded_context"]}
+
+            Original SQL:
+
+            {query_stripped}
+
+            Issues:
+
+            {trust_measures["auditing_issues"]}
+
+        """
+
+        full_prompt = user_prompt + system_prompt
+
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.responses.parse(
+            model="gpt-4o-mini",
+            input=full_prompt,
+            text_format=SQLResponse
+        )
+
+        result = response.output_parsed
+
+        sql_raw = result.sql
+        sql_trimmed = sql_raw.replace("'''sql", "")
+        sql_trimmed = sql_trimmed.replace("'''", "")
+        sql_trimmed = sql_trimmed.strip()
+
+        #strip the query of the trailing ; and then wrap in a limiter
+        sql_limited = f"""
+            SELECT * 
+            FROM (
+                {sql_trimmed.rstrip(';')}
+            ) t
+            LIMIT 10;
+        """
+
+        trust_measures["reasoning"] = f"SQL Generation Reasoning:  \n{result.reasoning}"
+        trust_measures["sql_query"] = sql_trimmed #easier to pass the non limited query for reability
+        return {"sql_query": sql_limited, "trust_measures": trust_measures}
+
+    except Exception as e:
+        return {
+            "safe": False,
+            "error_code": get_error_code(e)
+        }

@@ -22,16 +22,12 @@ def run_sql(query: str, trust_measures: dict):
 def generate_drill_down_data(query: str, trust_measures: dict):
     try:
         #strip and parse query
-        pre = """
-            SELECT * 
-            FROM (
-        """
-
-        suf = """
-            ) t
-            LIMIT 10;
-        """
-        query_stripped = query.removeprefix(pre).removesuffix(suf)
+        parsed = sqlglot.parse_one(query)
+        inner = parsed.find(exp.Subquery)
+        if inner:
+            query_stripped = inner.this.sql()
+        else:
+            query_stripped = query
         parsed = sqlglot.parse_one(query_stripped)
 
         #unwrap aliasses

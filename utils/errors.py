@@ -1,4 +1,5 @@
 import duckdb
+import traceback
 
 error_codes = {
     ValueError: "VALUE_ERROR",
@@ -12,4 +13,5 @@ def get_error_code(error: Exception):
         return error_codes.get(type(error))
     else:
         print (f"Unknown Error: \n{error}")
+        traceback.print_exc()
         return "UNKNOWN_ERROR"
